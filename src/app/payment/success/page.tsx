@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -8,7 +9,7 @@ import confetti from 'canvas-confetti'
 import { CheckCircle2, Download, ArrowRight, Home, BookOpen, Star, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-export default function PaymentSuccessPage() {
+const PaymentSuccessContent = () => {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tx_ref = searchParams.get('tx_ref')
@@ -16,7 +17,6 @@ export default function PaymentSuccessPage() {
 
   useEffect(() => {
     setMounted(true)
-    
     // Trigger confetti
     const duration = 5 * 1000
     const animationEnd = Date.now() + duration
@@ -155,5 +155,14 @@ export default function PaymentSuccessPage() {
         </motion.p>
       </motion.div>
     </div>
+
+  )
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PaymentSuccessContent />
+    </Suspense>
   )
 }

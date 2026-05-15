@@ -10,8 +10,6 @@ export const metadata: Metadata = {
   title: 'Yaza Study',
   description: 'Access high-quality PDF study materials and premium services for MSCE students in Malawi.',
   manifest: '/manifest.json',
-  themeColor: '#6366f1',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -22,6 +20,13 @@ export const metadata: Metadata = {
     shortcut: '/favicon.png',
     apple: '/favicon.png',
   },
+}
+
+export const viewport = {
+  themeColor: '#6366f1',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 }
 
 import PWAInstaller from '@/components/PWAInstaller'
