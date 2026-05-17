@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('Simple test payment request received:', body)
+    console.log('Simple test payment request received')
     
     // Direct API call to PayChangu with correct endpoint
     const response = await fetch('https://api.paychangu.com/v1/payment', {
@@ -18,13 +18,13 @@ export async function POST(request: NextRequest) {
     })
 
     const responseText = await response.text()
-    console.log('Simple test payment response:', responseText)
+    console.log('Simple test payment response status:', response.status)
     
     // Simple response handling
     if (response.ok) {
       try {
         const result = JSON.parse(responseText)
-        console.log('Simple test payment success:', result)
+        console.log('Simple test payment success: status', response.status)
         return NextResponse.json({
           success: true,
           data: result.data,
@@ -56,8 +56,6 @@ export async function GET(request: NextRequest) {
     message: 'Simple Payment Test Endpoint',
     status: 'success',
     timestamp: new Date().toISOString(),
-    api_key: process.env.PAYCHANGU_API_KEY?.substring(0, 10) + '...',
-    secret_key: process.env.PAYCHANGU_SECRET_KEY?.substring(0, 10) + '...',
-    base_url: process.env.PAYCHANGU_API_KEY ? 'Configured' : 'Missing'
+    configured: !!process.env.PAYCHANGU_API_KEY || !!process.env.PAYCHANGU_SECRET_KEY
   })
 }

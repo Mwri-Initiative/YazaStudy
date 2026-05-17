@@ -6,19 +6,15 @@ export async function GET(request: NextRequest) {
     message: 'PayChangu API Test Endpoint',
     status: 'success',
     timestamp: new Date().toISOString(),
-    test_data: {
-      api_key: process.env.PAYCHANGU_API_KEY?.substring(0, 10) + '...',
-      secret_key: process.env.PAYCHANGU_SECRET_KEY?.substring(0, 10) + '...',
-      base_url: process.env.PAYCHANGU_API_KEY ? 'Configured' : 'Missing'
-    }
+    configured: !!process.env.PAYCHANGU_API_KEY || !!process.env.PAYCHANGU_SECRET_KEY
   })
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('Test payment request received:', body)
-    
+    console.log('Test payment request received')
+
     const paychanguService = getPayChanguService()
     const response = await paychanguService.initiatePayment(body)
     

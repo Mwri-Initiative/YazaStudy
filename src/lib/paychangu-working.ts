@@ -48,7 +48,7 @@ export class PayChanguService {
    */
   async initiatePayment(paymentData: PayChanguPaymentRequest): Promise<PayChanguResponse> {
     try {
-      this.log('🚀 Initiating payment', paymentData)
+      this.log('🚀 Initiating payment', { tx_ref: paymentData.tx_ref, amount: paymentData.amount, currency: paymentData.currency })
 
       const payload = {
         amount: paymentData.amount,
@@ -74,10 +74,10 @@ export class PayChanguService {
       })
 
       const responseText = await response.text()
-      this.log('📡 PayChangu Response', { status: response.status, body: responseText })
+      this.log('📡 PayChangu Response', { status: response.status })
 
       if (!response.ok) {
-        this.log('❌ PayChangu API Error', responseText)
+        this.log('❌ PayChangu API Error', { status: response.status })
         return {
           success: false,
           error: `Payment initiation failed: ${responseText}`,
@@ -85,7 +85,7 @@ export class PayChanguService {
       }
 
       const result = JSON.parse(responseText)
-      this.log('✅ Payment initiated successfully', result)
+      this.log('✅ Payment initiated successfully', { status: response.status })
 
       // Extract checkout URL - handle different response formats
       const checkoutUrl =
@@ -148,10 +148,10 @@ export class PayChanguService {
       }
 
       const responseText = await response.text()
-      this.log('📡 Verification response', responseText)
+      this.log('📡 Verification response', { status: response.status })
 
       if (!response.ok) {
-        this.log('❌ Verification failed', responseText)
+        this.log('❌ Verification failed', { status: response.status })
         return {
           success: false,
           error: `Payment verification failed: ${responseText}`,
@@ -159,7 +159,7 @@ export class PayChanguService {
       }
 
       const result = JSON.parse(responseText)
-      this.log('✅ Payment verified', result)
+      this.log('✅ Payment verified', { status: response.status })
 
       return {
         success: true,
@@ -186,12 +186,37 @@ export class PayChanguService {
    * Internal logging method
    */
   private log(title: string, data?: any): void {
-    if (typeof window === 'undefined') {
-      // Server-side logging
-      console.log(`${title}`, data)
-    } else {
-      // Client-side logging
-      console.log(`${title}`, data)
+    const sanitize = (input: any) => {
+      try {
+        if (!input) return input
+        if (typeof input === 'string') return input.length > 200 ? input.slice(0, 200) + '...': input
+        const clone = JSON.parse(JSON.stringify(input))
+        const mask = (obj: any) => {
+          if (!obj || typeof obj !== 'object') return obj
+          for (const k of Object.keys(obj)) {
+            try {
+              if (/api|secret|token|key|authorization/i.test(k)) {
+                obj[k] = '***REDACTED***'
+              } else if (typeof obj[k] === 'object') {
+                mask(obj[k])
+              } else if (typeof obj[k] === 'string' && obj[k].length > 200) {
+                obj[k] = obj[k].slice(0, 200) + '...'
+              }
+            } catch {}
+          }
+        }
+        mask(clone)
+        return clone
+      } catch {
+        return String(input)
+      }
+    }
+
+    try {
+      const safe = sanitize(data)
+      console.log(`${title}`, safe)
+    } catch (e) {
+      console.log(title)
     }
   }
 }

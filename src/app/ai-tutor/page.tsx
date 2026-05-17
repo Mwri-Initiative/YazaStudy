@@ -11,6 +11,7 @@ import ReactMarkdown from 'react-markdown'
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  variant?: 'notice'
 }
 
 const QUICK_ACTIONS = [
@@ -68,14 +69,30 @@ export default function AITutorPage() {
       })
 
       const data = await response.json()
-      if (data.content) {
+      if (response.ok && data.content) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.content }])
       } else {
-        throw new Error(data.error || 'Failed to get response')
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            variant: 'notice',
+            content:
+              data.error ||
+              "Something went wrong while getting your answer. Please try again in a moment.",
+          },
+        ])
       }
-    } catch (error: any) {
-      const errorMsg = error.message || 'Connection error. Please try again.';
-      setMessages(prev => [...prev, { role: 'assistant', content: `**Error:** ${errorMsg}` }])
+    } catch {
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          variant: 'notice',
+          content:
+            "We couldn't reach Yaza AI. Check your internet connection and try again.",
+        },
+      ])
     } finally {
       setIsLoading(false)
     }
@@ -168,7 +185,9 @@ export default function AITutorPage() {
                     <div className={`px-4 py-3 md:px-5 md:py-4 rounded-2xl md:rounded-[24px] text-sm md:text-base leading-relaxed ${
                       m.role === 'user' 
                         ? 'bg-primary text-white rounded-tr-none shadow-md' 
-                        : 'bg-[#151515] border border-white/5 text-text-secondary rounded-tl-none'
+                        : m.variant === 'notice'
+                          ? 'bg-amber-500/10 border border-amber-500/20 text-amber-100/90 rounded-tl-none'
+                          : 'bg-[#151515] border border-white/5 text-text-secondary rounded-tl-none'
                     }`}>
                       <div className="markdown-content prose prose-invert prose-sm md:prose-base max-w-none">
                         <ReactMarkdown>{m.content}</ReactMarkdown>
