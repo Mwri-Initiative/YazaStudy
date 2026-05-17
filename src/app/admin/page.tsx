@@ -30,6 +30,8 @@ export default function AdminPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [statusMsg, setStatusMsg] = useState({ type: '', text: '' })
 
+  const MAX_UPLOAD_SIZE = 10 * 1024 * 1024 // 10 MB
+
   // Form State
   const [formData, setFormData] = useState({
     title: '',
@@ -63,7 +65,17 @@ export default function AdminPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0])
+      const file = e.target.files[0]
+      if (file.size > MAX_UPLOAD_SIZE) {
+        setStatusMsg({ type: 'error', text: 'File is too large. Please upload a PDF under 10MB.' })
+        return
+      }
+      if (file.type !== 'application/pdf') {
+        setStatusMsg({ type: 'error', text: 'Only PDF files are allowed.' })
+        return
+      }
+      setStatusMsg({ type: '', text: '' })
+      setSelectedFile(file)
     }
   }
 
@@ -74,29 +86,41 @@ export default function AdminPage() {
       return
     }
 
+    if (selectedFile.size > MAX_UPLOAD_SIZE) {
+      setStatusMsg({ type: 'error', text: 'File is too large. Please upload a PDF under 10MB.' })
+      return
+    }
+
     setIsSubmitting(true)
+    setUploadProgress(5)
     setStatusMsg({ type: 'info', text: 'Uploading material...' })
 
     try {
-      // 1. Upload File to Storage
-      const fileExt = selectedFile.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
-      const filePath = `${fileName}`
+      const sanitizedTitle = formData.title
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'material'
+      const fileExt = selectedFile.name.split('.').pop() || 'pdf'
+      const fileName = `${sanitizedTitle}-${Date.now()}.${fileExt}`
+      const filePath = `${formData.subject}/${fileName}`
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('materials')
         .upload(filePath, selectedFile, {
-            upsert: true
+          cacheControl: '3600',
+          contentType: selectedFile.type || 'application/pdf',
+          upsert: true,
         })
 
       if (uploadError) throw uploadError
+      setUploadProgress(50)
+      setStatusMsg({ type: 'info', text: 'Saving material details...' })
 
-      // 2. Get Public URL (or path for signed URLs)
       const { data: { publicUrl } } = supabase.storage
         .from('materials')
         .getPublicUrl(filePath)
 
-      // 3. Create Database Record
       const { error: dbError } = await supabase
         .from('materials')
         .insert([{
@@ -113,6 +137,7 @@ export default function AdminPage() {
 
       if (dbError) throw dbError
 
+      setUploadProgress(100)
       setStatusMsg({ type: 'success', text: 'Material uploaded successfully!' })
       setFormData({
         title: '',
@@ -130,6 +155,7 @@ export default function AdminPage() {
       setStatusMsg({ type: 'error', text: error.message || 'Failed to upload material.' })
     } finally {
       setIsSubmitting(false)
+      setUploadProgress(0)
     }
   }
 
@@ -317,15 +343,22 @@ export default function AdminPage() {
               </div>
 
               {statusMsg.text && (
-                <div className={`p-4 rounded-xl flex items-center gap-3 text-sm ${
+                <div className={`p-4 rounded-xl flex flex-col gap-3 text-sm ${
                   statusMsg.type === 'error' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
                   statusMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
                   'bg-primary/10 text-primary border border-primary/20'
                 }`}>
-                  {statusMsg.type === 'error' ? <AlertCircle className="w-4 h-4" /> : 
-                   statusMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> :
-                   <Loader2 className="w-4 h-4 animate-spin" />}
-                  {statusMsg.text}
+                  <div className="flex items-center gap-3">
+                    {statusMsg.type === 'error' ? <AlertCircle className="w-4 h-4" /> : 
+                     statusMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> :
+                     <Loader2 className="w-4 h-4 animate-spin" />}
+                    <span>{statusMsg.text}</span>
+                  </div>
+                  {isSubmitting && (
+                    <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
+                    </div>
+                  )}
                 </div>
               )}
 
