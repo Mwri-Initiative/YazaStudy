@@ -124,6 +124,11 @@ a {
               box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Subject color transitions */
+.transition-colors-subject {
+  transition: color 0.5s ease, border-color 0.5s ease, background-color 0.5s ease, box-shadow 0.5s ease;
+}
+
 .hover-lift:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);

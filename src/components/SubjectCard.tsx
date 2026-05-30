@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { Subject } from '@/types'
+import { Subject } from '../types'
 import { ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 

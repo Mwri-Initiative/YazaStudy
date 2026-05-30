@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { StudyMaterial } from '@/types'
+import { StudyMaterial } from '../types'
 import { ShoppingCart, Eye, Download } from 'lucide-react'
 
 interface MaterialCardProps {

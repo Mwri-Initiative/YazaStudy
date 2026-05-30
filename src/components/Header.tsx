@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { ShoppingCart, User, LogOut, BookOpen, ChevronDown, Menu, X, ShieldCheck } from 'lucide-react'
 import { Button } from './ui/button'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth } from '../lib/auth-context'
 
 const navItems = [
   { href: '/', label: 'Home' },

@@ -5,14 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { User, Lock, Phone, Mail, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth } from '../../lib/auth-context'
 
 function AuthForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { login, register, isAuthenticated, isLoading } = useAuth()
 
-  const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'register')
+  const initialMode = searchParams?.get('mode')
+  const [isLogin, setIsLogin] = useState(() => initialMode !== 'register')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
@@ -109,8 +110,8 @@ function AuthForm() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl glass mb-4 relative">
             <div className="absolute inset-0 glow-primary rounded-2xl" />
-            <Image
-              src="/mwiri-logo.png"
+                <Image
+                  src="/mwiri-logo.svg"
               alt="Yaza Stuff"
               width={40}
               height={40}

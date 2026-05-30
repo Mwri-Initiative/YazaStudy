@@ -58,7 +58,7 @@ function getFriendlyAiError(error: unknown): { message: string; status: number }
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json();
+    const { messages, subject, learningMode } = await req.json();
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: 'No messages provided.' }, { status: 400 });
     }
@@ -77,16 +77,38 @@ export async function POST(req: NextRequest) {
 
     const genAI = new GoogleGenerativeAI(apiKey)
 
-    const modelNames = ["gemini-flash-latest", "gemini-2.0-flash", "gemini-pro-latest"];
+    const modelNames = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-pro-latest"];
     let lastError: any = null;
 
     const history = buildGeminiHistory(messages);
+
+    // Build subject and mode-specific dynamic system instructions
+    let dynamicSystemPrompt = SYSTEM_PROMPT.trim();
+    if (subject && subject !== 'all') {
+      dynamicSystemPrompt += `\nYou are currently tutoring the student in the subject: ${subject.toUpperCase()}. Focus all explanations, concepts, context, and terminology specifically on the MSCE syllabus for ${subject}.`;
+    }
+    if (learningMode === 'revision') {
+      dynamicSystemPrompt += `\nYour learning mode is: EXAM REVISION. Provide concise revision summaries, highlight key points, list potential MSCE exam questions, and offer exam-taking tips and tricks. Use bullet points and lists to make it scannable.`;
+    } else if (learningMode === 'quiz') {
+      dynamicSystemPrompt += `\nYour learning mode is: INTERACTIVE QUIZ. You MUST ask a multiple-choice question testing the student's knowledge of the current topic. Format your output strictly using the custom 'yaza-quiz' block like so:
+\`\`\`yaza-quiz
+{
+  "question": "Insert your question here?",
+  "options": ["Option A", "Option B", "Option C", "Option D"],
+  "correctIndex": 0,
+  "explanation": "Provide a simple, clear explanation of why the correct option is right."
+}
+\`\`\`
+Do not include other conversational text in the message besides the yaza-quiz block when presenting a quiz. Give one question at a time.`;
+    } else {
+      dynamicSystemPrompt += `\nYour learning mode is: CONCEPT EXPLAINER. Explain topics from basic principles, break down complex formulas or ideas step-by-step, and use intuitive metaphors and real-world Malawi references (like Lake Malawi, Lilongwe/Blantyre, local farming, mobile money, etc.) to make learning engaging and local.`;
+    }
 
     for (const modelName of modelNames) {
       try {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          systemInstruction: SYSTEM_PROMPT.trim(),
+          systemInstruction: dynamicSystemPrompt,
         });
 
         const chat = model.startChat({ history });

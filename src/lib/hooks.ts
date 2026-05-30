@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import { friendlyErrorMessage } from './utils'
 
 /**
  * Hook for processing payments
@@ -42,9 +43,9 @@ export function usePayment() {
 
         return result.data
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error'
+        const message = friendlyErrorMessage(err)
         setError(message)
-        throw err
+        throw new Error(message)
       } finally {
         setIsLoading(false)
       }
@@ -72,9 +73,9 @@ export function usePayment() {
 
         return result.data
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error'
+        const message = friendlyErrorMessage(err)
         setError(message)
-        throw err
+        throw new Error(message)
       } finally {
         setIsLoading(false)
       }
@@ -157,9 +158,9 @@ export function useMaterials() {
         setMaterials(result.data || [])
         return result.data
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error'
+        const message = friendlyErrorMessage(err)
         setError(message)
-        throw err
+        throw new Error(message)
       } finally {
         setIsLoading(false)
       }

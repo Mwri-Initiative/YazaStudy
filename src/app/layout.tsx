@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import MainLayout from '@/components/MainLayout'
-import { AuthProvider } from '@/lib/auth-context'
+import MainLayout from '../components/MainLayout'
+import { AuthProvider } from '../lib/auth-context'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -16,9 +16,9 @@ export const metadata: Metadata = {
     title: 'Yaza Study',
   },
   icons: {
-    icon: '/favicon.png',
-    shortcut: '/favicon.png',
-    apple: '/favicon.png',
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   },
 }
 
@@ -29,7 +29,7 @@ export const viewport = {
   maximumScale: 1,
 }
 
-import PWAInstaller from '@/components/PWAInstaller'
+import PWAInstaller from '../components/PWAInstaller'
 
 export default function RootLayout({
   children,

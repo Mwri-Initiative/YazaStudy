@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import MaterialCard from '@/components/MaterialCard'
-import { StudyMaterial } from '@/types'
+import { Button } from '../../components/ui/button'
+import MaterialCard from '../../components/MaterialCard'
+import { StudyMaterial } from '../../types'
 import { Search, Filter, ShoppingCart, Sparkles, BookOpen, GraduationCap } from 'lucide-react'
 
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '../../lib/supabase/client'
 
 export default function ShopPage() {
   const [materials, setMaterials] = useState<StudyMaterial[]>([])

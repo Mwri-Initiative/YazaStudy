@@ -3,18 +3,18 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { StudyMaterial } from '@/types'
+import { Button } from '../../components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { StudyMaterial } from '../../types'
 import { Loader2, CreditCard, ArrowLeft, CheckCircle, AlertCircle, ShieldCheck, Mail, User, Phone, BookOpen } from 'lucide-react'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth } from '../../lib/auth-context'
 
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '../../lib/supabase/client'
 
 function PaymentContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const supabase = createClient()
   
   const [material, setMaterial] = useState<StudyMaterial | null>(null)
@@ -46,7 +46,7 @@ function PaymentContent() {
       }
     }
 
-    const materialId = searchParams.get('materialId') || searchParams.get('id')
+    const materialId = searchParams?.get('materialId') || searchParams?.get('id')
     if (materialId) {
       fetchMaterial(materialId)
     }
@@ -62,7 +62,13 @@ function PaymentContent() {
         phone: user.phone || ''
       }))
     }
-  }, [searchParams, user, supabase])
+
+    // Redirect unauthenticated users to login
+    if (!isAuthenticated && !isLoading) {
+      const currentUrl = window.location.pathname + window.location.search
+      router.push(`/auth?redirect=${encodeURIComponent(currentUrl)}`)
+    }
+  }, [searchParams, user, isAuthenticated, isLoading, supabase, router])
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
@@ -124,7 +130,9 @@ function PaymentContent() {
         tx_ref: reference,
         callback_url: `${window.location.origin}/api/payment/webhook`,
         return_url: `${window.location.origin}/payment/success?tx_ref=${reference}&materialId=${material.id}`,
-        description: `Purchase: ${material.title}`
+        description: `Purchase: ${material.title}`,
+        material_id: material.id,
+        materialId: material.id
       }
 
       const response = await fetch('/api/payment/initiate', {

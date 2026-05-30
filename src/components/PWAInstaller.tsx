@@ -8,10 +8,10 @@ export default function PWAInstaller() {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').then(
           (registration) => {
-            console.log('SW registered: ', registration)
+            console.debug('Service worker registered')
           },
           (registrationError) => {
-            console.log('SW registration failed: ', registrationError)
+            console.debug('Service worker registration failed')
           }
         )
       })

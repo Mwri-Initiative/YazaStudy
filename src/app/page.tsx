@@ -3,12 +3,12 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import SubjectCard from '@/components/SubjectCard'
-import { Subject } from '@/types'
+import { Button } from '../components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import SubjectCard from '../components/SubjectCard'
+import { Subject } from '../types'
 import { Star, Users, Zap, ArrowRight, BookOpen, Shield, CheckCircle2 } from 'lucide-react'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth } from '../lib/auth-context'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const subjects: Subject[] = [
@@ -110,7 +110,7 @@ export default function Home() {
               <div className="relative group">
                 <div className="absolute inset-[-8px] bg-gradient-to-r from-secondary to-accent rounded-full blur-xl opacity-50 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse" />
                 <Image
-                  src="/mwiri-logo.png"
+                    src="/mwiri-logo.svg"
                   alt="Mwiri Logo"
                   width={120}
                   height={120}

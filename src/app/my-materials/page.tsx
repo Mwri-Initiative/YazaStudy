@@ -1,26 +1,51 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { StudyMaterial } from '@/types'
-import { Download, Eye, Search, Filter, BookOpen, Clock, Layers } from 'lucide-react'
+import { Button } from '../../components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { StudyMaterial } from '../../types'
+import { Download, Eye, Search, BookOpen, Clock, Layers, Lock } from 'lucide-react'
+import { useSearchParams, useRouter } from 'next/navigation'
 
-import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/auth-context'
-import PdfViewerModal from '@/components/PdfViewerModal'
+import { createClient } from '../../lib/supabase/client'
+import { useAuth } from '../../lib/auth-context'
+import PdfViewerModal from '../../components/PdfViewerModal'
+
+/**
+ * Extracts the Supabase Storage object path from a public URL.
+ * e.g. https://xxx.supabase.co/storage/v1/object/public/materials/mathematics/file.pdf
+ *   → "mathematics/file.pdf"
+ */
+function extractStoragePath(publicUrl: string): string | null {
+  try {
+    const url = new URL(publicUrl)
+    // Path looks like: /storage/v1/object/public/materials/subject/filename.pdf
+    const parts = url.pathname.split('/public/materials/')
+    if (parts.length > 1) return parts[1].split('?')[0]
+    // Fallback: try to get everything after the bucket name
+    const bucketIdx = url.pathname.indexOf('/materials/')
+    if (bucketIdx !== -1) return url.pathname.slice(bucketIdx + '/materials/'.length).split('?')[0]
+    return null
+  } catch {
+    return null
+  }
+}
 
 export default function MyMaterialsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const router = useRouter()
   const [materials, setMaterials] = useState<StudyMaterial[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSubject, setSelectedSubject] = useState('all')
   const [viewerOpen, setViewerOpen] = useState(false)
   const [activeMaterial, setActiveMaterial] = useState<StudyMaterial | null>(null)
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(null)
   const supabase = createClient()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
+
     const fetchMyMaterials = async () => {
       if (!user) return
       setIsLoading(true)
@@ -43,6 +68,15 @@ export default function MyMaterialsPage() {
           .map(item => item.materials as unknown as StudyMaterial)
         
         setMaterials(flattened)
+
+        // If a focus param was provided (from payment success), auto-open that material
+        const focusId = searchParams?.get('focus')
+        if (focusId) {
+          const found = flattened.find(m => m.id === focusId)
+          if (found) {
+            setPendingFocusId(focusId)
+          }
+        }
       }
       setIsLoading(false)
     }
@@ -51,10 +85,12 @@ export default function MyMaterialsPage() {
       if (isAuthenticated) {
         fetchMyMaterials()
       } else {
+        // Redirect unauthenticated users to login
+        router.push('/auth?redirect=/my-materials')
         setIsLoading(false)
       }
     }
-  }, [user, isAuthenticated, authLoading, supabase])
+  }, [user, isAuthenticated, authLoading, supabase, router])
 
   const filteredMaterials = materials.filter(material => {
     const matchesSearch = material.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -71,19 +107,20 @@ export default function MyMaterialsPage() {
     }
 
     try {
-        const fileName = url.split('/').pop()?.split('?')[0]
-        if (!fileName) throw new Error('Invalid file path')
+        // Extract the full storage path (e.g. "mathematics/file-123.pdf")
+        const storagePath = extractStoragePath(url)
+        if (!storagePath) throw new Error('Could not parse storage path from URL')
 
         const { data, error } = await supabase
             .storage
             .from('materials')
-            .createSignedUrl(fileName, 60) // Short lived for download
+            .createSignedUrl(storagePath, 120) // 2 min for download
 
         if (error) throw error
         window.open(data.signedUrl, '_blank')
     } catch (err) {
         console.error('Download error:', err)
-        alert('Failed to generate secure download link.')
+        alert('Failed to generate secure download link. Please try again.')
     }
   }
 
@@ -95,28 +132,39 @@ export default function MyMaterialsPage() {
     }
 
     try {
-        // Extract the filename from the URL (e.g., 'math.pdf')
-        const fileName = url.split('/').pop()?.split('?')[0]
-        if (!fileName) throw new Error('Invalid file path')
+        // Extract the full storage path (e.g. "mathematics/file-123.pdf")
+        const storagePath = extractStoragePath(url)
+        if (!storagePath) throw new Error('Could not parse storage path from URL')
 
-        // Generate a Signed URL that lasts for 1 hour
+        // Generate a signed URL valid for 1 hour
         const { data, error } = await supabase
             .storage
             .from('materials')
-            .createSignedUrl(fileName, 3600)
+            .createSignedUrl(storagePath, 3600)
 
         if (error) throw error
 
         setActiveMaterial({
             ...material,
-            previewUrl: data.signedUrl // Use the secure signed URL
+            previewUrl: data.signedUrl
         })
         setViewerOpen(true)
     } catch (err) {
         console.error('Error securing PDF access:', err)
-        alert('Failed to load secure material. Please ensure you are logged in.')
+        alert('Failed to load secure material. Please try again or contact support.')
     }
   }
+
+  // When a pending focus id is set (from payment success), open the preview
+  useEffect(() => {
+    if (!pendingFocusId || materials.length === 0) return
+    const found = materials.find(m => m.id === pendingFocusId)
+    if (!found) return
+    setTimeout(() => {
+      handlePreview(found)
+      setPendingFocusId(null)
+    }, 250)
+  }, [pendingFocusId, materials])
 
   const inputClass = `w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-text placeholder-text-muted
     focus:outline-none focus:border-primary/60 focus:bg-primary/5 focus:ring-1 focus:ring-primary/30

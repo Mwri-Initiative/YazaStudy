@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPayChanguService } from '@/lib/paychangu-working'
+import { getPayChanguService } from '../../../../lib/paychangu-working'
 
 /**
  * POST /api/payment/verify

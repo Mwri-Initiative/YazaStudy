@@ -3,11 +3,11 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { StudyMaterial } from '@/types'
+import { Button } from '../../components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { StudyMaterial } from '../../types'
 import { Loader2, CreditCard, ArrowLeft, CheckCircle, AlertCircle, ShieldCheck, Mail, User, Phone } from 'lucide-react'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth } from '../../lib/auth-context'
 
 const sampleMaterials: StudyMaterial[] = [
   {
@@ -52,7 +52,7 @@ function PaymentFinalContent() {
   })
 
   useEffect(() => {
-    const materialId = searchParams.get('id')
+    const materialId = searchParams?.get('id')
     if (materialId) {
       const foundMaterial = sampleMaterials.find(m => m.id === materialId)
       setMaterial(foundMaterial || null)
@@ -189,7 +189,7 @@ function PaymentFinalContent() {
                 <CardHeader className="pb-2 text-center">
                    <div className="flex justify-center mb-4">
                     <Image 
-                      src="/mwiri-logo.png" 
+                      src="/mwiri-logo.svg" 
                       alt="Mwiri" 
                       width={60} 
                       height={60}

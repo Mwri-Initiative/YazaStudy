@@ -189,7 +189,7 @@ export default function Footer() {
         <div className="h-px bg-gradient-to-r from-transparent via-surface/80 to-transparent mb-6" />
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center">
           <p className="text-xs text-text-muted">
-            © {year} <span className="text-primary font-medium">Yaza Study</span> · Made with ❤️ for Malawi students
+            © {year} <span className="text-primary font-medium">Yaza Study</span> · Made with Love ❤️ for Malawi students 📚
           </p>
           <p className="text-xs text-text-muted">
             A <span className="text-accent font-medium">Mwiri</span> Initiative

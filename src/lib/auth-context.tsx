@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from './supabase/client'
 import { useRouter } from 'next/navigation'
 
 export interface User {

@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { StudyMaterial } from '@/types'
-import { getPayChanguService, PayChanguPaymentRequest } from '@/lib/paychangu-working'
+import { Button } from './ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { StudyMaterial } from '../types'
+import { getPayChanguService, PayChanguPaymentRequest } from '../lib/paychangu-working'
 import { Loader2, CreditCard, X } from 'lucide-react'
 
 function generateReference(): string {

@@ -1,5 +1,5 @@
 {
-  "name": "Yaza Study - MSCE Excellence",
+  "name": "Yaza Study",
   "short_name": "Yaza Study",
   "description": "Premium MSCE study materials and AI tutoring.",
   "start_url": "/",
@@ -18,6 +18,13 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ,
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

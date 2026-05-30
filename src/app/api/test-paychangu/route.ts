@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPayChanguService } from '@/lib/paychangu-working'
+import { getPayChanguService } from '../../../lib/paychangu-working'
 
 export async function GET(request: NextRequest) {
   return NextResponse.json({ 

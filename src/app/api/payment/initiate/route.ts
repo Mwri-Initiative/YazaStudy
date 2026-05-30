@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPayChanguService } from '@/lib/paychangu-working'
-import { validatePaymentRequest, formatValidationErrors } from '@/lib/validation'
-import { createClient } from '@/lib/supabase/server'
+import { getPayChanguService } from '../../../../lib/paychangu-working'
+import { validatePaymentRequest, formatValidationErrors } from '../../../../lib/validation'
+import { createClient } from '../../../../lib/supabase/server'
 
 /**
  * POST /api/payment/initiate
