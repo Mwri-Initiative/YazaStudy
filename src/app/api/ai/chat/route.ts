@@ -2,18 +2,30 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
 const SYSTEM_PROMPT = `
-You are "Yaza AI", a premium, friendly, and expert MSCE (Malawi School Certificate of Education) Tutor. 
-Your goal is to help Malawi students excel in their exams.
-Explain concepts simply, using local Malawi context. Use Markdown for formatting.
+You are Yaza AI, a patient, encouraging, expert learning coach for students preparing for Malawi MSCE examinations.
+
+Your job is to TEACH, not merely answer questions. The student should leave each interaction understanding more than when they arrived.
+
+Teaching rules:
+1. Diagnose before dumping information. When the student's level is unclear, ask one short question about what they already know or what part is confusing.
+2. Teach in layers: simple idea first, then the important detail, then a worked example where useful.
+3. Use clear language appropriate for a secondary-school learner. Define unfamiliar terms.
+4. Prefer guided discovery. For problems, let the student attempt a step before revealing the full solution when practical. Give a hint before the final answer if they are stuck.
+5. After teaching, check understanding with one short question or mini-practice task.
+6. If the student makes a mistake, be kind: identify the misconception, explain why it happened, and give a similar example to retry.
+7. Adapt the explanation when asked: simpler, more detailed, visual/analogy-based, step-by-step, exam-focused, or with another example.
+8. Use Malawi-relevant examples naturally (school life, farming, transport, Lake Malawi, local commerce, everyday technology) when they improve understanding. Do not force local references.
+9. Never pretend certainty. If a syllabus detail is uncertain, say so and explain the general principle.
+10. For exam preparation, teach the reasoning and method, not just memorized answers.
+11. Keep responses structured with useful headings, bullets, formulas, examples, and short checks. Avoid unnecessarily long lectures.
+12. Encourage the student without flattery that distracts from learning.
+
+Default teaching loop:
+UNDERSTAND -> EXPLAIN -> EXAMPLE -> TRY -> FEEDBACK -> RETRY.
 `;
 
 function buildGeminiHistory(messages: { role: string; content: string }[]) {
-  const mapped = messages.slice(0, -1).map((m) => ({
-    role: m.role === "user" ? ("user" as const) : ("model" as const),
-    parts: [{ text: m.content }],
-  }));
-
-  // Gemini chat history must start with a user message (UI welcome is assistant-only).
+  const mapped = messages.slice(0, -1).map((m) => ({ role: m.role === "user" ? ("user" as const) : ("model" as const), parts: [{ text: m.content }] }));
   const firstUserIndex = mapped.findIndex((m) => m.role === "user");
   return firstUserIndex === -1 ? [] : mapped.slice(firstUserIndex);
 }
@@ -21,110 +33,50 @@ function buildGeminiHistory(messages: { role: string; content: string }[]) {
 function getFriendlyAiError(error: unknown): { message: string; status: number } {
   const raw = error instanceof Error ? error.message : String(error ?? "");
   const lower = raw.toLowerCase();
-
-  if (lower.includes("429") || lower.includes("quota") || lower.includes("too many requests")) {
-    return {
-      message:
-        "Yaza AI is receiving a lot of questions right now. Please wait a minute and try again.",
-      status: 503,
-    };
-  }
-
-  if (
-    lower.includes("403") ||
-    lower.includes("api key") ||
-    lower.includes("leaked") ||
-    lower.includes("not configured")
-  ) {
-    return {
-      message:
-        "Yaza AI is temporarily unavailable. Please try again later — we're working on it.",
-      status: 503,
-    };
-  }
-
-  if (lower.includes("fetch failed") || lower.includes("network") || lower.includes("econnrefused")) {
-    return {
-      message: "We couldn't reach Yaza AI. Check your internet connection and try again.",
-      status: 503,
-    };
-  }
-
-  return {
-    message: "Something went wrong while getting your answer. Please try again in a moment.",
-    status: 500,
-  };
+  if (lower.includes("429") || lower.includes("quota") || lower.includes("too many requests")) return { message: "Yaza AI is receiving a lot of questions right now. Please wait a minute and try again.", status: 503 };
+  if (lower.includes("403") || lower.includes("api key") || lower.includes("leaked") || lower.includes("not configured")) return { message: "Yaza AI is temporarily unavailable. Please try again later — we're working on it.", status: 503 };
+  if (lower.includes("fetch failed") || lower.includes("network") || lower.includes("econnrefused")) return { message: "We couldn't reach Yaza AI. Check your internet connection and try again.", status: 503 };
+  return { message: "Something went wrong while getting your learning response. Please try again in a moment.", status: 500 };
 }
 
 export async function POST(req: NextRequest) {
   try {
     const { messages, subject, learningMode } = await req.json();
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json({ error: 'No messages provided.' }, { status: 400 });
-    }
+    if (!Array.isArray(messages) || messages.length === 0) return NextResponse.json({ error: 'No messages provided.' }, { status: 400 });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'your_gemini_api_key_here') return NextResponse.json({ error: "Yaza AI is temporarily unavailable. Please try again later — we're working on it." }, { status: 503 });
 
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-      console.error("AI Chat: GEMINI_API_KEY is not configured");
-      return NextResponse.json(
-        {
-          error:
-            "Yaza AI is temporarily unavailable. Please try again later — we're working on it.",
-        },
-        { status: 503 }
-      );
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-
+    const genAI = new GoogleGenerativeAI(apiKey);
     const modelNames = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-pro-latest"];
-    let lastError: any = null;
-
     const history = buildGeminiHistory(messages);
-
-    // Build subject and mode-specific dynamic system instructions
     let dynamicSystemPrompt = SYSTEM_PROMPT.trim();
-    if (subject && subject !== 'all') {
-      dynamicSystemPrompt += `\nYou are currently tutoring the student in the subject: ${subject.toUpperCase()}. Focus all explanations, concepts, context, and terminology specifically on the MSCE syllabus for ${subject}.`;
-    }
-    if (learningMode === 'revision') {
-      dynamicSystemPrompt += `\nYour learning mode is: EXAM REVISION. Provide concise revision summaries, highlight key points, list potential MSCE exam questions, and offer exam-taking tips and tricks. Use bullet points and lists to make it scannable.`;
+
+    if (subject && subject !== 'all') dynamicSystemPrompt += `\n\nCurrent subject: ${subject.toUpperCase()}. Keep the teaching aligned with the Malawi MSCE level and this subject.`;
+
+    if (learningMode === 'practice') {
+      dynamicSystemPrompt += `\n\nMODE: GUIDED PRACTICE. Give the student one appropriate problem. Do not immediately reveal the final answer. Ask them to attempt a step, then coach their reasoning. If they are stuck, provide progressively stronger hints before showing the solution.`;
+    } else if (learningMode === 'revision') {
+      dynamicSystemPrompt += `\n\nMODE: EXAM REVISION. First give a compact mental model of the topic, then key facts/formulas, a common exam trap, and one short recall or application question. Keep it scannable.`;
     } else if (learningMode === 'quiz') {
-      dynamicSystemPrompt += `\nYour learning mode is: INTERACTIVE QUIZ. You MUST ask a multiple-choice question testing the student's knowledge of the current topic. Format your output strictly using the custom 'yaza-quiz' block like so:
-\`\`\`yaza-quiz
-{
-  "question": "Insert your question here?",
-  "options": ["Option A", "Option B", "Option C", "Option D"],
-  "correctIndex": 0,
-  "explanation": "Provide a simple, clear explanation of why the correct option is right."
-}
-\`\`\`
-Do not include other conversational text in the message besides the yaza-quiz block when presenting a quiz. Give one question at a time.`;
+      dynamicSystemPrompt += `\n\nMODE: INTERACTIVE QUIZ. Ask exactly one multiple-choice question at a time. Use this format exactly:\n\`\`\`yaza-quiz\n{\n  "question": "Question?",\n  "options": ["Option A", "Option B", "Option C", "Option D"],\n  "correctIndex": 0,\n  "explanation": "Why the correct answer is correct, plus the key learning point."\n}\n\`\`\`\nDo not reveal the correct answer before the student checks their response. Make questions age-appropriate and aligned to the selected subject.`;
     } else {
-      dynamicSystemPrompt += `\nYour learning mode is: CONCEPT EXPLAINER. Explain topics from basic principles, break down complex formulas or ideas step-by-step, and use intuitive metaphors and real-world Malawi references (like Lake Malawi, Lilongwe/Blantyre, local farming, mobile money, etc.) to make learning engaging and local.`;
+      dynamicSystemPrompt += `\n\nMODE: TEACH ME. Start by identifying the student's current understanding when needed. Build the explanation from simple to deeper, include a useful example, then end with one short check-for-understanding. Do not turn every request into a long lecture.`;
     }
 
+    let lastError: any = null;
     for (const modelName of modelNames) {
       try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          systemInstruction: dynamicSystemPrompt,
-        });
-
+        const model = genAI.getGenerativeModel({ model: modelName, systemInstruction: dynamicSystemPrompt });
         const chat = model.startChat({ history });
         const lastMessage = messages[messages.length - 1].content;
         const result = await chat.sendMessage(lastMessage);
         const response = await result.response;
-        const text = await response.text();
-
-        return NextResponse.json({ content: text });
+        return NextResponse.json({ content: await response.text() });
       } catch (e: any) {
         console.warn(`Model ${modelName} fallback attempt failed:`, e?.message || e);
         lastError = e;
-        continue;
       }
     }
-
     throw lastError;
   } catch (error: unknown) {
     console.error("AI Chat Final Error:", error);
