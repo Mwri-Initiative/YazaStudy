@@ -1,75 +1,92 @@
-const CACHE_NAME = 'yaza-study-v1';
+const VERSION = 'yaza-study-v2';
+const STATIC_CACHE = `${VERSION}-static`;
+const RUNTIME_CACHE = `${VERSION}-runtime`;
 const OFFLINE_URL = '/offline.html';
+
+const PRECACHE_URLS = [
+  '/',
+  OFFLINE_URL,
+  '/manifest.json',
+  '/favicon.svg',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.addAll([
-        '/',
-        '/manifest.json',
-        '/favicon.svg',
-        OFFLINE_URL,
-      ]);
-      // Force the waiting service worker to become the active service worker
-      await self.skipWaiting();
-    })()
+    caches.open(STATIC_CACHE)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
-      );
-      await self.clients.claim();
-    })()
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => ![STATIC_CACHE, RUNTIME_CACHE].includes(key))
+          .map((key) => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// Fetch handler - try network first for navigation requests, fall back to cache
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok && request.method === 'GET') {
+      const cache = await caches.open(RUNTIME_CACHE);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return (await caches.match(request)) || (await caches.match(OFFLINE_URL));
+  }
+}
+
+async function staleWhileRevalidate(request) {
+  const cached = await caches.match(request);
+  const network = fetch(request).then(async (response) => {
+    if (response.ok) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  }).catch(() => cached);
+
+  return cached || network;
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  if (request.method !== 'GET') return;
 
-  // Handle navigation requests (HTML pages)
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
   if (request.mode === 'navigate') {
-    event.respondWith(
-      (async () => {
-        try {
-          const networkResponse = await fetch(request);
-          // Update the cache with the latest HTML
-          const cache = await caches.open(CACHE_NAME);
-          cache.put(request, networkResponse.clone());
-          return networkResponse;
-        } catch (err) {
-          const cachedResponse = await caches.match(request);
-          if (cachedResponse) return cachedResponse;
-          const offlineResponse = await caches.match(OFFLINE_URL);
-          return offlineResponse;
-        }
-      })()
-    );
+    event.respondWith(networkFirst(request));
     return;
   }
 
-  // For other requests, try cache first, then network, then fallback
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      return (
-        cached ||
-        fetch(request).catch(async () => {
-          // If request is for an image or stylesheet, optionally return a placeholder
-          if (request.destination === 'image') {
-            return caches.match('/favicon.svg');
-          }
-          return caches.match(OFFLINE_URL);
-        })
-      );
-    })
-  );
+  if (request.destination === 'document') {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // Keep app shell assets available after the first visit.
+  if (['style', 'script', 'font', 'image'].includes(request.destination)) {
+    event.respondWith(staleWhileRevalidate(request));
+    return;
+  }
+
+  // PDFs explicitly visited by the learner are retained for offline reading.
+  if (url.pathname.toLowerCase().endsWith('.pdf')) {
+    event.respondWith(staleWhileRevalidate(request));
+  }
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
