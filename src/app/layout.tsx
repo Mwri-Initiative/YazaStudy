@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import MainLayout from '../components/MainLayout'
 import { AuthProvider } from '../lib/auth-context'
+import PWAInstaller from '../components/PWAInstaller'
+import OfflineStatus from '../components/OfflineStatus'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -29,8 +31,6 @@ export const viewport = {
   maximumScale: 1,
 }
 
-import PWAInstaller from '../components/PWAInstaller'
-
 export default function RootLayout({
   children,
 }: {
@@ -40,6 +40,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <PWAInstaller />
+        <OfflineStatus />
         <AuthProvider>
           <MainLayout>{children}</MainLayout>
         </AuthProvider>

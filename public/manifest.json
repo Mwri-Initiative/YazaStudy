@@ -1,11 +1,15 @@
 {
-  "name": "Yaza Study",
+  "name": "Yaza Study — MSCE Learning Hub",
   "short_name": "Yaza Study",
-  "description": "Premium MSCE study materials and AI tutoring.",
+  "description": "A mobile-first study hub for MSCE learners in Malawi, with study materials and AI tutoring.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#0a0a0b",
   "theme_color": "#6366f1",
+  "categories": ["education", "books"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -18,13 +22,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    }
-  ,
-    {
-      "src": "/favicon.svg",
-      "sizes": "64x64",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ]
 }
