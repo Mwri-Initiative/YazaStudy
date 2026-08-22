@@ -1,75 +1,101 @@
-const CACHE_NAME = 'yaza-study-v1';
+const CACHE_NAME = 'yaza-study-v2';
 const OFFLINE_URL = '/offline.html';
+
+const PRECACHE_URLS = [
+  '/',
+  OFFLINE_URL,
+  '/manifest.json',
+  '/favicon.svg',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.addAll([
-        '/',
-        '/manifest.json',
-        '/favicon.svg',
-        OFFLINE_URL,
-      ]);
-      // Force the waiting service worker to become the active service worker
-      await self.skipWaiting();
-    })()
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
-      );
-      await self.clients.claim();
-    })()
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// Fetch handler - try network first for navigation requests, fall back to cache
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+function isCacheableResponse(response) {
+  return response && response.ok && response.type !== 'opaque';
+}
+
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (isCacheableResponse(response)) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return caches.match(request);
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Handle navigation requests (HTML pages)
+  if (request.method !== 'GET') return;
+
+  // HTML navigation: always prefer fresh content, but provide a real offline page.
   if (request.mode === 'navigate') {
     event.respondWith(
-      (async () => {
-        try {
-          const networkResponse = await fetch(request);
-          // Update the cache with the latest HTML
-          const cache = await caches.open(CACHE_NAME);
-          cache.put(request, networkResponse.clone());
-          return networkResponse;
-        } catch (err) {
-          const cachedResponse = await caches.match(request);
-          if (cachedResponse) return cachedResponse;
-          const offlineResponse = await caches.match(OFFLINE_URL);
-          return offlineResponse;
-        }
-      })()
+      networkFirst(request).then(async (response) => {
+        if (response) return response;
+        return caches.match(OFFLINE_URL);
+      })
     );
     return;
   }
 
-  // For other requests, try cache first, then network, then fallback
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      return (
-        cached ||
-        fetch(request).catch(async () => {
-          // If request is for an image or stylesheet, optionally return a placeholder
-          if (request.destination === 'image') {
-            return caches.match('/favicon.svg');
+  // Never intercept API calls. Authentication, Supabase and other server APIs
+  // must receive their normal network behaviour when a connection is available.
+  if (new URL(request.url).pathname.startsWith('/api/')) return;
+
+  // Static assets are cache-first for fast repeat visits, with the network as
+  // a fallback so new deployments can update assets naturally.
+  if (
+    request.destination === 'style' ||
+    request.destination === 'script' ||
+    request.destination === 'font' ||
+    request.destination === 'image' ||
+    request.destination === 'manifest'
+  ) {
+    event.respondWith(
+      caches.match(request).then(async (cached) => {
+        if (cached) return cached;
+        try {
+          const response = await fetch(request);
+          if (isCacheableResponse(response)) {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(request, response.clone());
           }
-          return caches.match(OFFLINE_URL);
-        })
-      );
-    })
-  );
+          return response;
+        } catch {
+          return undefined;
+        }
+      })
+    );
+  }
 });
