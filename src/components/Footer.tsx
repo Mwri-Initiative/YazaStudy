@@ -4,6 +4,18 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowUpRight, BookOpen, ChevronRight, Mail, MessageCircle, Sparkles } from 'lucide-react'
 
+type FooterLink = {
+  label: string
+  href: string
+  badge?: string
+  external?: boolean
+}
+
+type FooterGroup = {
+  title: string
+  links: FooterLink[]
+}
+
 const socialLinks = [
   { name: 'Facebook', href: 'https://facebook.com/emmanuel.chinamwiri', icon: 'f' },
   { name: 'X', href: 'https://x.com/manzychinamwiri', icon: '𝕏' },
@@ -13,7 +25,7 @@ const socialLinks = [
   { name: 'TikTok', href: 'https://tiktok.com/@MwiriWrld', icon: '♪' },
 ]
 
-const footerGroups = [
+const footerGroups: FooterGroup[] = [
   {
     title: 'Explore',
     links: [
