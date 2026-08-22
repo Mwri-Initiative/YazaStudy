@@ -13,7 +13,19 @@ const socialLinks = [
   { name: 'TikTok', href: 'https://tiktok.com/@MwiriWrld', icon: '♪' },
 ]
 
-const footerGroups = [
+type FooterLink = {
+  label: string
+  href: string
+  badge?: string
+  external?: boolean
+}
+
+type FooterGroup = {
+  title: string
+  links: FooterLink[]
+}
+
+const footerGroups: FooterGroup[] = [
   {
     title: 'Explore',
     links: [
