@@ -214,7 +214,7 @@ export default function AdminPage() {
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '') || 'material'
-        const fileExt = file.name.split('.').pop() || 'pdf'
+        const fileExt = 'pdf'
         // Add a random suffix and never overwrite an existing study resource.
         const uniqueSuffix = typeof crypto !== 'undefined' && 'randomUUID' in crypto
           ? crypto.randomUUID()
