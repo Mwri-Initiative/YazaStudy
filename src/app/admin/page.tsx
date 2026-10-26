@@ -129,8 +129,14 @@ export default function AdminPage() {
           setStatusMsg({ type: 'error', text: `File "${file.name}" is too large. Max size is 10MB.` })
           return
         }
-        if (file.type !== 'application/pdf') {
-          setStatusMsg({ type: 'error', text: `File "${file.name}" is not a PDF.` })
+        // The browser MIME type can be empty, so verify the actual PDF signature
+        // during submit as well. Do not trust the filename or MIME type alone.
+        if (!/\.pdf$/i.test(file.name) || (file.type && file.type !== 'application/pdf')) {
+          setStatusMsg({ type: 'error', text: `File "${file.name}" must be a PDF.` })
+          return
+        }
+        if (file.size === 0) {
+          setStatusMsg({ type: 'error', text: `File "${file.name}" is empty.` })
           return
         }
         
@@ -184,6 +190,18 @@ export default function AdminPage() {
         const file = selectedFiles[i]
         const meta = filesMetadata[i]
 
+        // Re-check editable metadata at publish time, not only in the UI.
+        if (!meta.title.trim()) throw new Error(`Please enter a title for "${file.name}".`)
+        if (!Number.isFinite(meta.price) || meta.price < 0) throw new Error(`Price for "${meta.title}" must be zero or greater.`)
+        if (!Number.isInteger(meta.pages) || meta.pages < 0) throw new Error(`Page count for "${meta.title}" must be a non-negative whole number.`)
+        if (!SUBJECT_OPTIONS.some(option => option.value === meta.subject)) throw new Error(`Choose a valid subject for "${meta.title}".`)
+        if (!['basic', 'intermediate', 'advanced'].includes(meta.difficulty)) throw new Error(`Choose a valid difficulty for "${meta.title}".`)
+
+        // Validate the PDF magic bytes. A .pdf extension alone is not sufficient.
+        const signature = new Uint8Array(await file.slice(0, 5).arrayBuffer())
+        const signatureText = String.fromCharCode(...signature)
+        if (signatureText !== '%PDF-') throw new Error(`"${file.name}" does not appear to be a valid PDF file.`)
+
         const percentDone = Math.round((i / selectedFiles.length) * 100)
         setUploadProgress(percentDone)
         setStatusMsg({ 
@@ -197,16 +215,20 @@ export default function AdminPage() {
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '') || 'material'
         const fileExt = file.name.split('.').pop() || 'pdf'
-        const fileName = `${sanitizedTitle}-${Date.now()}.${fileExt}`
+        // Add a random suffix and never overwrite an existing study resource.
+        const uniqueSuffix = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+        const fileName = `${sanitizedTitle}-${uniqueSuffix}.${fileExt}`
         const filePath = `${meta.subject}/${fileName}`
 
-        // Upload PDF to Supabase storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        // Upload PDF to Supabase storage without overwriting an existing object.
+        const { error: uploadError } = await supabase.storage
           .from('materials')
           .upload(filePath, file, {
             cacheControl: '3600',
-            contentType: file.type || 'application/pdf',
-            upsert: true,
+            contentType: 'application/pdf',
+            upsert: false,
           })
 
         if (uploadError) throw new Error(`Upload failed for "${meta.title}": ${uploadError.message}`)
@@ -223,15 +245,20 @@ export default function AdminPage() {
             title: meta.title.trim(),
             description: meta.description.trim(),
             subject: meta.subject,
-            price: meta.price,
+            price: Math.round(meta.price),
             type: 'pdf',
             difficulty: meta.difficulty,
-            pages: meta.pages || 0,
+            pages: meta.pages,
             previewUrl: publicUrl,
             downloadUrl: publicUrl,
           }])
 
-        if (dbError) throw new Error(`DB insert failed for "${meta.title}": ${dbError.message}`)
+        if (dbError) {
+          // Avoid leaving an orphaned PDF in storage when its catalogue record fails.
+          const { error: cleanupError } = await supabase.storage.from('materials').remove([filePath])
+          const cleanupNote = cleanupError ? ' The uploaded file could not be cleaned up automatically; please remove it from storage.' : ''
+          throw new Error(`DB insert failed for "${meta.title}": ${dbError.message}.${cleanupNote}`)
+        }
       }
 
       setUploadProgress(100)
@@ -247,7 +274,7 @@ export default function AdminPage() {
 
     } catch (error: any) {
       console.error('Upload process error:', error)
-      setStatusMsg({ type: 'error', text: error.message || 'Failed to complete bulk uploads.' })
+      setStatusMsg({ type: 'error', text: error instanceof Error ? error.message : 'Failed to complete bulk uploads.' })
     } finally {
       setIsSubmitting(false)
       setUploadProgress(0)
