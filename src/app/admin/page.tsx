@@ -233,10 +233,8 @@ export default function AdminPage() {
 
         if (uploadError) throw new Error(`Upload failed for "${meta.title}": ${uploadError.message}`)
 
-        // Get public download URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('materials')
-          .getPublicUrl(filePath)
+        // Store only the private bucket-relative path. Never persist a public URL.
+        const storagePath = filePath
 
         // Insert database row
         const { error: dbError } = await supabase
@@ -249,8 +247,8 @@ export default function AdminPage() {
             type: 'pdf',
             difficulty: meta.difficulty,
             pages: meta.pages,
-            previewUrl: publicUrl,
-            downloadUrl: publicUrl,
+            previewUrl: storagePath,
+            downloadUrl: storagePath,
           }])
 
         if (dbError) {
@@ -284,11 +282,13 @@ export default function AdminPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this material?')) return
 
-    const { error } = await supabase.from('materials').delete().eq('id', id)
-    if (!error) {
-      setMaterials(materials.filter(m => m.id !== id))
-    } else {
-      alert(`Delete failed: ${error.message}`)
+    try {
+      const response = await fetch(`/api/admin/materials/${encodeURIComponent(id)}`, { method: 'DELETE' })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Delete failed.')
+      setMaterials(current => current.filter(material => material.id !== id))
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Delete failed.')
     }
   }
 
