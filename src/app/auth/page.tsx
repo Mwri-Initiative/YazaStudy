@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { User, Lock, Phone, Mail, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react'
 import { useAuth } from '../../lib/auth-context'
+import { createClient } from '../../lib/supabase/client'
 
 function AuthForm() {
   const searchParams = useSearchParams()
@@ -19,6 +20,7 @@ function AuthForm() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [resetSubmitting, setResetSubmitting] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -43,6 +45,35 @@ function AuthForm() {
     setError('')
     setSuccess('')
     setFormData({ name: '', email: '', phone: '', password: '', confirmPassword: '' })
+  }
+
+  const handleForgotPassword = async () => {
+    const email = formData.email.trim()
+    if (!email) {
+      setError('Enter your email address first.')
+      setSuccess('')
+      return
+    }
+
+    setError('')
+    setSuccess('')
+    setResetSubmitting(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
+
+      if (error) {
+        setError(error.message)
+      } else {
+        setSuccess('If an account exists for this email, a password reset link has been sent. Check your inbox and spam folder.')
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Could not send the reset email. Please try again.')
+    } finally {
+      setResetSubmitting(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -288,9 +319,14 @@ function AuthForm() {
             {/* Forgot password (login only) */}
             {isLogin && (
               <div className="text-right">
-                <a href="#" className="text-xs text-primary hover:text-secondary smooth-transition">
-                  Forgot password?
-                </a>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={resetSubmitting || submitting || isLoading}
+                  className="text-xs text-primary hover:text-secondary smooth-transition disabled:opacity-60"
+                >
+                  {resetSubmitting ? 'Sending reset link...' : 'Forgot password?'}
+                </button>
               </div>
             )}
 
