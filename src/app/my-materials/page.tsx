@@ -10,17 +10,6 @@ import { createClient } from '../../lib/supabase/client'
 import { useAuth } from '../../lib/auth-context'
 import PdfViewerModal from '../../components/PdfViewerModal'
 
-function extractStoragePath(publicUrl: string): string | null {
-  try {
-    const url = new URL(publicUrl)
-    const parts = url.pathname.split('/public/materials/')
-    if (parts.length > 1) return parts[1].split('?')[0]
-    const bucketIdx = url.pathname.indexOf('/materials/')
-    if (bucketIdx !== -1) return url.pathname.slice(bucketIdx + '/materials/'.length).split('?')[0]
-    return null
-  } catch { return null }
-}
-
 function MyMaterialsPageContent() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const router = useRouter()
@@ -58,29 +47,35 @@ function MyMaterialsPageContent() {
     return ((material.title || '').toLowerCase().includes(q) || (material.description || '').toLowerCase().includes(q)) && (selectedSubject === 'all' || material.subject === selectedSubject)
   })
 
+  const requestMaterialUrl = async (material: StudyMaterial) => {
+    const response = await fetch(`/api/materials/${encodeURIComponent(material.id)}/access`, {
+      method: 'GET',
+      cache: 'no-store',
+    })
+    const result = await response.json()
+    if (!response.ok || !result.url) throw new Error(result.error || 'Unable to verify access to this PDF.')
+    return result.url as string
+  }
+
   const handleDownload = async (material: StudyMaterial) => {
-    const url = material.downloadUrl
-    if (!url) { alert('Download link coming soon!'); return }
     try {
-      const storagePath = extractStoragePath(url)
-      if (!storagePath) throw new Error('Could not parse storage path from URL')
-      const { data, error } = await supabase.storage.from('materials').createSignedUrl(storagePath, 120)
-      if (error) throw error
-      window.open(data.signedUrl, '_blank')
-    } catch (err) { console.error('Download error:', err); alert('Failed to generate secure download link. Please try again.') }
+      const url = await requestMaterialUrl(material)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      console.error('Download error:', err)
+      alert(err instanceof Error ? err.message : 'Failed to prepare secure download.')
+    }
   }
 
   const handlePreview = async (material: StudyMaterial) => {
-    const url = material.previewUrl || material.downloadUrl
-    if (!url) { alert('Material content not yet available.'); return }
     try {
-      const storagePath = extractStoragePath(url)
-      if (!storagePath) throw new Error('Could not parse storage path from URL')
-      const { data, error } = await supabase.storage.from('materials').createSignedUrl(storagePath, 3600)
-      if (error) throw error
-      setActiveMaterial({ ...material, previewUrl: data.signedUrl })
+      const url = await requestMaterialUrl(material)
+      setActiveMaterial({ ...material, previewUrl: url })
       setViewerOpen(true)
-    } catch (err) { console.error('Error securing PDF access:', err); alert('Failed to load secure material. Please try again or contact support.') }
+    } catch (err) {
+      console.error('Preview error:', err)
+      alert(err instanceof Error ? err.message : 'Failed to load secure material.')
+    }
   }
 
   useEffect(() => {
