@@ -41,11 +41,7 @@ function getStoragePath(value: string | null | undefined): string | null {
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Sign in to access this material.' }, { status: 401 })
-    }
+    const { data: { user } } = await supabase.auth.getUser()
 
     const { data: material, error: materialError } = await supabase
       .from('materials')
@@ -57,16 +53,22 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'Material not found.' }, { status: 404 })
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .maybeSingle()
+    const isPaidMaterial = Number(material.price) > 0
+    if (isPaidMaterial && !user) {
+      return NextResponse.json({ error: 'Sign in and purchase this material to access its PDF.' }, { status: 401 })
+    }
 
-    const isAdmin = profile?.is_admin === true
-    let hasPurchased = false
+    let isAdmin = false
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .maybeSingle()
+      isAdmin = profile?.is_admin === true
+    }
 
-    if (!isAdmin && Number(material.price) > 0) {
+    if (isPaidMaterial && user && !isAdmin) {
       const { data: ownership, error: ownershipError } = await supabase
         .from('user_materials')
         .select('material_id')
@@ -78,11 +80,9 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
         console.error('Material ownership lookup failed:', ownershipError)
         return NextResponse.json({ error: 'Unable to verify material access.' }, { status: 500 })
       }
-      hasPurchased = !!ownership
-    }
-
-    if (!isAdmin && Number(material.price) > 0 && !hasPurchased) {
-      return NextResponse.json({ error: 'Purchase this material to access its PDF.' }, { status: 403 })
+      if (!ownership) {
+        return NextResponse.json({ error: 'Purchase this material to access its PDF.' }, { status: 403 })
+      }
     }
 
     const storagePath = getStoragePath(material.downloadUrl || material.previewUrl)
