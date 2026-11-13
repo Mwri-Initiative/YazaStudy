@@ -87,7 +87,16 @@ export default function MaterialCard({
           {isPurchased || material.price === 0 ? (
             <Button 
               className="flex-1 bg-accent hover:bg-accent/90 text-white font-bold shadow-lg shadow-accent/20 text-xs"
-              onClick={() => window.open(material.downloadUrl)}
+              onClick={async () => {
+                try {
+                  const response = await fetch(`/api/materials/${encodeURIComponent(material.id)}/access`, { cache: 'no-store' })
+                  const result = await response.json()
+                  if (!response.ok || !result.url) throw new Error(result.error || 'Unable to access this PDF.')
+                  window.open(result.url, '_blank', 'noopener,noreferrer')
+                } catch (error) {
+                  alert(error instanceof Error ? error.message : 'Unable to access this PDF.')
+                }
+              }}
             >
               <Download className="mr-2 h-3.5 w-3.5" />
               Download
