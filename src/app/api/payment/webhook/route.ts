@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getPayChanguService } from '../../../../lib/paychangu-working'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,9 +50,30 @@ export async function POST(request: NextRequest) {
       console.error('❌ Webhook: DB lookup error:', findError)
     }
 
-    // ─── Normalize status ─────────────────────────────────────────────────
-    const isSuccess = status === 'success' || status === 'completed' || status === 'paid'
-    const normalizedStatus = isSuccess ? 'success' : status === 'failed' ? 'failed' : 'pending'
+    if (findError) {
+      return NextResponse.json({ success: false, error: 'Payment lookup failed' }, { status: 500 })
+    }
+    if (!paymentRecord || !paymentRecord.user_id || !paymentRecord.material_id) {
+      console.warn('Webhook ignored: no matching user-owned pending payment record.')
+      return NextResponse.json({ success: false, error: 'Unknown payment reference' }, { status: 404 })
+    }
+
+    // Never trust a browser/provider callback payload alone to grant access.
+    const paychanguService = getPayChanguService()
+    const verification = await paychanguService.verifyPayment(reference)
+    if (!verification.success) {
+      return NextResponse.json({ success: false, error: 'Provider verification failed' }, { status: 402 })
+    }
+
+    const verified = verification.data
+    const verifiedStatus = String(verified?.status || '').toLowerCase()
+    const isSuccess = ['success', 'completed', 'paid'].includes(verifiedStatus)
+    const verifiedAmount = Number(verified?.amount)
+    if (isSuccess && (!Number.isFinite(verifiedAmount) || verifiedAmount !== Number(paymentRecord.amount))) {
+      return NextResponse.json({ success: false, error: 'Verified amount does not match payment record' }, { status: 400 })
+    }
+    const normalizedStatus = isSuccess ? 'success' : verifiedStatus === 'failed' ? 'failed' : 'pending'
+    const verifiedPaymentMethod = verified?.payment_method || paymentMethod
 
     // ─── Update payment record ────────────────────────────────────────────
     if (paymentRecord) {
@@ -65,7 +87,7 @@ export async function POST(request: NextRequest) {
         .from('payments')
         .update({
           status: normalizedStatus,
-          payment_method: paymentMethod,
+          payment_method: verifiedPaymentMethod,
           updated_at: new Date().toISOString(),
         })
         .eq('transaction_id', reference)
@@ -73,16 +95,12 @@ export async function POST(request: NextRequest) {
       if (updateError) {
         console.error('❌ Webhook: Failed to update payment record:', updateError)
       }
-    } else {
-      // Payment record not found — create one
-      console.warn(`⚠️ Webhook: No payment record found for reference: ${reference}`)
-      // We still try to grant access based on body data if we have it
     }
 
-    // ─── Grant material access on success ────────────────────────────────
+    // ─── Grant material access on verified success ───────────────────────
     if (isSuccess) {
-      const userId = paymentRecord?.user_id || body.user_id || null
-      const materialId = paymentRecord?.material_id || body.material_id || null
+      const userId = paymentRecord.user_id
+      const materialId = paymentRecord.material_id
 
       if (userId && materialId) {
         console.log(`✅ Webhook: Granting access — user=${userId} material=${materialId}`)
