@@ -38,7 +38,16 @@ export default function ShopPage() {
     setFilteredMaterials(filtered)
   }, [searchTerm, selectedSubject, selectedType, priceRange, materials])
 
-  const handlePreview = (material: StudyMaterial) => window.open(material.previewUrl, '_blank')
+  const handlePreview = async (material: StudyMaterial) => {
+    try {
+      const response = await fetch(`/api/materials/${encodeURIComponent(material.id)}/access`, { cache: 'no-store' })
+      const result = await response.json()
+      if (!response.ok || !result.url) throw new Error(result.error || 'Purchase this material to preview its PDF.')
+      window.open(result.url, '_blank', 'noopener,noreferrer')
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Unable to preview this material.')
+    }
+  }
   const clearFilters = () => { setSearchTerm(''); setSelectedSubject('all'); setSelectedType('all'); setPriceRange({ min: 0, max: 5000 }) }
   const activeFilters = Number(selectedSubject !== 'all') + Number(selectedType !== 'all') + Number(priceRange.max < 5000)
 
