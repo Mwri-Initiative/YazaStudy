@@ -37,9 +37,31 @@ export async function POST(request: NextRequest) {
     const returnUrl = body.return_url || body.returnUrl || body.redirect_url
     const materialId = body.material_id || body.materialId
 
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Sign in before purchasing study materials.' }, { status: 401 })
+    }
+    if (typeof materialId !== 'string' || !materialId.trim() || typeof reference !== 'string' || !reference.trim()) {
+      return NextResponse.json({ success: false, error: 'A valid material and transaction reference are required.' }, { status: 400 })
+    }
+
+    // Price and title must come from the catalogue, never from the browser.
+    const { data: material, error: materialError } = await supabase
+      .from('materials')
+      .select('id, title, price')
+      .eq('id', materialId)
+      .maybeSingle()
+
+    if (materialError || !material) {
+      return NextResponse.json({ success: false, error: 'Study material not found.' }, { status: 404 })
+    }
+    const cataloguePrice = Number(material.price)
+    if (!Number.isFinite(cataloguePrice) || cataloguePrice <= 0 || Number(amount) !== cataloguePrice || currency !== 'MWK') {
+      return NextResponse.json({ success: false, error: 'The submitted price does not match the catalogue.' }, { status: 400 })
+    }
+
     // 1. Create a pending payment record in Supabase
     const { error: dbError } = await supabase.from('payments').insert({
-      user_id: user?.id || null,
+      user_id: user.id,
       material_id: materialId || null,
       amount: amount,
       status: 'pending',
@@ -49,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       console.error('❌ Database error creating payment record:', dbError)
-      // We continue anyway so the user can still pay, but we log the error
+      return NextResponse.json({ success: false, error: 'Unable to create payment record. Please try again.' }, { status: 500 })
     }
 
     // Get PayChangu service
@@ -66,7 +88,7 @@ export async function POST(request: NextRequest) {
       callback_url: callbackUrl,
       return_url: returnUrl,
       phone: body.phone,
-      description: body.description,
+      description: `Purchase: ${material.title}`,
     })
 
     if (!result.success) {
