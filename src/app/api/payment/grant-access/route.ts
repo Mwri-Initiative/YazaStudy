@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayChanguService } from '../../../../lib/paychangu-working'
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createSessionClient } from '../../../../lib/supabase/server'
 
 // Use service role so we can write without user session
 const supabaseAdmin = createClient(
@@ -20,108 +21,84 @@ const supabaseAdmin = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { tx_ref, materialId, userId } = body
+    const tx_ref = typeof body.tx_ref === 'string' ? body.tx_ref.trim() : ''
 
-    if (!tx_ref) {
-      return NextResponse.json(
-        { success: false, error: 'tx_ref is required' },
-        { status: 400 }
-      )
+    if (!tx_ref || tx_ref.length > 160) {
+      return NextResponse.json({ success: false, error: 'A valid transaction reference is required.' }, { status: 400 })
     }
 
-    console.log(`🔐 grant-access: Verifying tx_ref=${tx_ref}`)
+    // The browser session, not client-supplied userId/materialId, determines ownership.
+    const sessionClient = await createSessionClient()
+    const { data: { user }, error: authError } = await sessionClient.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ success: false, error: 'Sign in to verify this purchase.' }, { status: 401 })
+    }
 
-    // ─── Step 1: Verify with PayChangu ──────────────────────────────────────
+    const { data: paymentRecord, error: findError } = await supabaseAdmin
+      .from('payments')
+      .select('user_id, material_id, amount, status, transaction_id')
+      .eq('transaction_id', tx_ref)
+      .maybeSingle()
+
+    if (findError) {
+      console.error('grant-access payment lookup failed:', findError)
+      return NextResponse.json({ success: false, error: 'Unable to find this payment.' }, { status: 500 })
+    }
+    if (!paymentRecord || paymentRecord.user_id !== user.id || !paymentRecord.material_id) {
+      return NextResponse.json({ success: false, error: 'This transaction does not belong to your account.' }, { status: 403 })
+    }
+
     const paychanguService = getPayChanguService()
     const verification = await paychanguService.verifyPayment(tx_ref)
 
     if (!verification.success) {
-      console.error('❌ grant-access: PayChangu verification failed:', verification.error)
-      return NextResponse.json(
-        { success: false, error: 'Payment could not be verified with PayChangu.' },
-        { status: 402 }
-      )
+      return NextResponse.json({ success: false, error: 'Payment could not be verified with PayChangu.' }, { status: 402 })
     }
 
     const paymentData = verification.data
-    const paymentStatus =
-      paymentData?.status?.toLowerCase?.() === 'success' ||
-      paymentData?.status?.toLowerCase?.() === 'completed'
+    const paymentStatus = ['success', 'completed', 'paid'].includes(String(paymentData?.status || '').toLowerCase())
+    const verifiedAmount = Number(paymentData?.amount)
+    const expectedAmount = Number(paymentRecord.amount)
 
-    if (!paymentStatus) {
-      console.warn(`⚠️ grant-access: PayChangu status is "${paymentData?.status}" — not yet successful.`)
-      return NextResponse.json(
-        { success: false, error: `Payment status is "${paymentData?.status}". Not yet confirmed.` },
-        { status: 402 }
-      )
+    if (!paymentStatus || !Number.isFinite(verifiedAmount) || verifiedAmount !== expectedAmount) {
+      return NextResponse.json({ success: false, error: 'Payment is not confirmed for the expected amount.' }, { status: 402 })
     }
 
-    // ─── Step 2: Find payment record in DB ──────────────────────────────────
-    const { data: paymentRecord, error: findError } = await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from('payments')
-      .select('*')
+      .update({
+        status: 'success',
+        payment_method: paymentData?.payment_method || 'paychangu',
+        updated_at: new Date().toISOString(),
+      })
       .eq('transaction_id', tx_ref)
-      .maybeSingle()
+      .eq('user_id', user.id)
 
-    // Determine user_id and material_id (fallback to what was passed from client)
-    const resolvedUserId = paymentRecord?.user_id || userId || null
-    const resolvedMaterialId = paymentRecord?.material_id || materialId || null
-
-    // ─── Step 3: Update payment record to success ────────────────────────────
-    if (paymentRecord) {
-      await supabaseAdmin
-        .from('payments')
-        .update({
-          status: 'success',
-          payment_method: paymentData?.payment_method || paymentRecord.payment_method || 'paychangu',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('transaction_id', tx_ref)
-      console.log('✅ grant-access: Payment record updated to success')
-    } else {
-      // Insert a new record if one doesn't exist (edge case)
-      if (resolvedUserId && resolvedMaterialId) {
-        await supabaseAdmin.from('payments').insert({
-          user_id: resolvedUserId,
-          material_id: resolvedMaterialId,
-          amount: paymentData?.amount || 0,
-          status: 'success',
-          transaction_id: tx_ref,
-          payment_method: paymentData?.payment_method || 'paychangu',
-        })
-      }
+    if (updateError) {
+      console.error('grant-access payment update failed:', updateError)
+      return NextResponse.json({ success: false, error: 'Payment verified but could not be recorded.' }, { status: 500 })
     }
 
-    // ─── Step 4: Grant material access ──────────────────────────────────────
-    if (resolvedUserId && resolvedMaterialId) {
-      const { error: accessError } = await supabaseAdmin
-        .from('user_materials')
-        .upsert(
-          {
-            user_id: resolvedUserId,
-            material_id: resolvedMaterialId,
-            purchased_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,material_id' }
-        )
+    const { error: accessError } = await supabaseAdmin
+      .from('user_materials')
+      .upsert(
+        {
+          user_id: user.id,
+          material_id: paymentRecord.material_id,
+          purchased_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,material_id' }
+      )
 
-      if (accessError) {
-        console.error('❌ grant-access: Failed to insert user_materials:', accessError)
-        return NextResponse.json(
-          { success: false, error: 'Payment verified but access grant failed. Contact support.' },
-          { status: 500 }
-        )
-      }
-
-      console.log(`✅ grant-access: Access granted for user=${resolvedUserId} material=${resolvedMaterialId}`)
-    } else {
-      console.warn('⚠️ grant-access: Cannot grant access — missing userId or materialId.')
+    if (accessError) {
+      console.error('grant-access access grant failed:', accessError)
+      return NextResponse.json({ success: false, error: 'Payment verified but access grant failed. Contact support.' }, { status: 500 })
     }
 
     return NextResponse.json({
       success: true,
       message: 'Payment verified and access granted.',
-      materialId: resolvedMaterialId,
+      materialId: paymentRecord.material_id,
     })
   } catch (error) {
     console.error('💥 grant-access error:', error)
