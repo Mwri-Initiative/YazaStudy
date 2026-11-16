@@ -5,26 +5,26 @@
 @import "tailwindcss/utilities";
 
 :root {
-  --primary: #16a36a;
-  --primary-dark: #0d7a4d;
-  --secondary: #f4b740;
-  --secondary-dark: #d7961e;
-  --accent: #3b82f6;
-  --accent-dark: #2563eb;
-  --background: #07110d;
-  --background-light: #0d1b15;
-  --surface: #10231a;
-  --surface-light: #173326;
-  --text: #f4faf7;
-  --text-secondary: #c4d6ce;
-  --text-muted: #8da79b;
-  --glass: rgba(15, 35, 26, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.09);
-  --glass-dark: rgba(4, 12, 9, 0.78);
-  --glass-dark-border: rgba(255, 255, 255, 0.07);
+  --primary: #8b5cf6;
+  --primary-dark: #6d28d9;
+  --secondary: #22d3ee;
+  --secondary-dark: #0891b2;
+  --accent: #06b6d4;
+  --accent-dark: #0891b2;
+  --background: #090b14;
+  --background-light: #111525;
+  --surface: #171a2b;
+  --surface-light: #22263b;
+  --text: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --glass: rgba(20, 24, 42, 0.76);
+  --glass-border: rgba(167, 139, 250, 0.14);
+  --glass-dark: rgba(10, 13, 25, 0.9);
+  --glass-dark-border: rgba(255, 255, 255, 0.08);
   --radius-card: 24px;
-  --shadow-soft: 0 16px 45px rgba(0, 0, 0, 0.18);
-  --shadow-deep: 0 28px 80px rgba(0, 0, 0, 0.32);
+  --shadow-soft: 0 16px 45px rgba(0, 0, 0, 0.24);
+  --shadow-deep: 0 28px 80px rgba(0, 0, 0, 0.42);
 }
 
 * {
@@ -43,9 +43,9 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 5% -5%, rgba(22, 163, 106, 0.18), transparent 32rem),
-    radial-gradient(circle at 100% 15%, rgba(59, 130, 246, 0.08), transparent 28rem),
-    linear-gradient(180deg, #07110d 0%, #08150f 48%, #06100c 100%);
+    radial-gradient(circle at 5% -5%, rgba(139, 92, 246, 0.18), transparent 34rem),
+    radial-gradient(circle at 100% 15%, rgba(34, 211, 238, 0.09), transparent 30rem),
+    linear-gradient(180deg, #090b14 0%, #0c1020 48%, #080b14 100%);
   color: var(--text);
   font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height: 100svh;
@@ -92,7 +92,7 @@ button,
 }
 
 ::selection {
-  background: rgba(22, 163, 106, 0.35);
+  background: rgba(139, 92, 246, 0.38);
   color: white;
 }
 
@@ -155,28 +155,28 @@ button,
 
 /* Focus states designed for keyboard and mobile accessibility */
 :focus-visible {
-  outline: 3px solid rgba(59, 130, 246, .6);
+  outline: 3px solid rgba(34, 211, 238, .65);
   outline-offset: 3px;
 }
 
 /* Brand accents */
 .gradient-text {
-  background: linear-gradient(135deg, #7ee7b4 0%, #16a36a 48%, #4c9cff 100%);
+  background: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 48%, #22d3ee 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gradient-text-primary {
-  background: linear-gradient(135deg, #7ee7b4 0%, var(--primary) 75%);
+  background: linear-gradient(135deg, #c4b5fd 0%, var(--primary) 75%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.glow-primary { box-shadow: 0 0 30px rgba(22,163,106,.22); }
-.glow-secondary { box-shadow: 0 0 30px rgba(244,183,64,.18); }
-.glow-accent { box-shadow: 0 0 30px rgba(59,130,246,.18); }
+.glow-primary { box-shadow: 0 0 30px rgba(139,92,246,.24); }
+.glow-secondary { box-shadow: 0 0 30px rgba(34,211,238,.16); }
+.glow-accent { box-shadow: 0 0 30px rgba(34,211,238,.2); }
 
 /* Motion */
 @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
@@ -236,7 +236,7 @@ button,
 ::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: rgba(255,255,255,.025); }
 ::-webkit-scrollbar-thumb { background: rgba(141,167,155,.3); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(22,163,106,.65); }
+::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,.72); }
 
 @media (min-width: 640px) {
   .page-shell { width: min(100% - 48px, 1180px); }
