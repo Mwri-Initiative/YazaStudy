@@ -14,6 +14,8 @@ function AuthForm() {
   const { login, register, isAuthenticated, isLoading } = useAuth()
 
   const initialMode = searchParams?.get('mode')
+  const requestedRedirect = searchParams?.get('redirect')
+  const destination = requestedRedirect && requestedRedirect.startsWith('/') && !requestedRedirect.startsWith('//') ? requestedRedirect : '/'
   const [isLogin, setIsLogin] = useState(() => initialMode !== 'register')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -32,8 +34,8 @@ function AuthForm() {
 
   // If already logged in redirect
   useEffect(() => {
-    if (isAuthenticated) router.push('/')
-  }, [isAuthenticated, router])
+    if (isAuthenticated) router.push(destination)
+  }, [isAuthenticated, router, destination])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(f => ({ ...f, [e.target.name]: e.target.value }))
@@ -98,7 +100,7 @@ function AuthForm() {
           setError(result.error || 'Login failed.')
         } else {
           setSuccess('Welcome back! Redirecting...')
-          setTimeout(() => router.push('/'), 800)
+          setTimeout(() => router.push(destination), 800)
         }
       } else {
         const result = await register(formData.name, formData.email, formData.password, formData.phone || undefined)
