@@ -5,8 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowRight, BookOpen, Brain, CalendarDays, CheckCircle2, FileText,
-  GraduationCap, LayoutDashboard, Library, Search, Sparkles, ShoppingBag,
-  TrendingUp, Zap
+  GraduationCap, Layers, Library, Search, Sparkles, ShoppingBag, Zap
 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
@@ -152,7 +151,7 @@ export default function StudentDashboardPage() {
           </Card>
           <Card className="rounded-2xl border-white/10 bg-[#11131d]/90 text-white shadow-xl shadow-black/10">
             <CardContent className="flex items-center gap-4 p-5">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-300"><LayersIcon /></div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-300"><Layers className="h-6 w-6" /></div>
               <div><p className="text-2xl font-black">{isLoading ? '—' : subjectCount}</p><p className="mt-0.5 text-xs font-semibold text-slate-400">Subjects represented</p></div>
             </CardContent>
           </Card>
@@ -226,8 +225,4 @@ export default function StudentDashboardPage() {
       </div>
     </main>
   )
-}
-
-function LayersIcon() {
-  return <TrendingUp className="h-6 w-6" />
 }
