@@ -74,7 +74,7 @@ export default function Footer() {
             <div className="flex min-w-0 items-start gap-4">
               <div className="relative shrink-0">
                 <div className="absolute -inset-2 rounded-2xl bg-violet-500/25 blur-lg" />
-                <Image src="/mwiri-side-logo.png" alt="Yaza Study" width={52} height={52} className="relative h-12 w-12 rounded-2xl object-cover sm:h-14 sm:w-14" />
+                <Image src="/yaza-icon.svg" alt="Yaza Study" width={52} height={52} className="relative h-12 w-12 rounded-2xl object-contain sm:h-14 sm:w-14" />
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
