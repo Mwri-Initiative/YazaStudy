@@ -50,7 +50,7 @@ export default function Header() {
           <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3 group">
             <div className="relative shrink-0">
               <div className="absolute -inset-1 rounded-full bg-primary/25 blur-md opacity-0 group-hover:opacity-100 smooth-transition" />
-              <Image src="/mwiri-side-logo.png" alt="Yaza Study" width={38} height={38} className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full" />
+              <Image src="/yaza-icon.svg" alt="Yaza Study" width={38} height={38} className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-xl object-contain" />
             </div>
             <div className="min-w-0 leading-none">
               <span className="block truncate text-base sm:text-lg font-extrabold font-heading text-text">Yaza<span className="text-primary">Study</span></span>
