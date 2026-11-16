@@ -16,14 +16,13 @@ export const metadata: Metadata = {
     title: 'Yaza Study',
   },
   icons: {
-    icon: '/favicon.svg',
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
     shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
   },
 }
 
 export const viewport = {
-  themeColor: '#6366f1',
+  themeColor: '#19052F',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
