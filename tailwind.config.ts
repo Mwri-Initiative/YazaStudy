@@ -11,28 +11,28 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#2E8B57',
-          dark: '#1a5c3a',
-          light: '#3fa872',
+          DEFAULT: '#8B5CF6',
+          dark: '#6D28D9',
+          light: '#A78BFA',
         },
         secondary: {
-          DEFAULT: '#FFC107',
-          dark: '#e6a800',
-          light: '#ffca28',
+          DEFAULT: '#22D3EE',
+          dark: '#0891B2',
+          light: '#67E8F9',
         },
         accent: {
-          DEFAULT: '#2196F3',
-          dark: '#1976D2',
-          light: '#42a5f5',
+          DEFAULT: '#06B6D4',
+          dark: '#0E7490',
+          light: '#67E8F9',
         },
         background: {
-          DEFAULT: '#0F172A',
-          light: '#1E293B',
+          DEFAULT: '#090B14',
+          light: '#111525',
         },
         surface: {
-          DEFAULT: '#334155',
-          light: '#475569',
-          dark: '#1e293b',
+          DEFAULT: '#171A2B',
+          light: '#22263B',
+          dark: '#111525',
         },
         text: {
           DEFAULT: '#F8FAFC',
