@@ -144,8 +144,8 @@ function AuthForm() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl glass mb-4 relative">
             <div className="absolute inset-0 glow-primary rounded-2xl" />
                 <Image
-                  src="/mwiri-logo.svg"
-              alt="Yaza Stuff"
+                  src="/yaza-icon.svg"
+              alt="Yaza Study"
               width={40}
               height={40}
               className="h-10 w-auto relative z-10 rounded-xl"
@@ -157,7 +157,7 @@ function AuthForm() {
           <p className="text-text-muted text-sm">
             {isLogin
               ? 'Sign in to access your purchased materials'
-              : 'Join thousands of MSCE students on Yaza Stuff'}
+              : 'Join the Yaza Study learning community'}
           </p>
         </div>
 
