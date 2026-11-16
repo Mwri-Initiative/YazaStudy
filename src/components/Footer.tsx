@@ -2,15 +2,15 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowUpRight, BookOpen, ChevronRight, Mail, MessageCircle, Sparkles } from 'lucide-react'
+import { ArrowUpRight, BookOpen, Camera, ChevronRight, Mail, MessageCircle, Music2, PlayCircle, Sparkles } from 'lucide-react'
 
 const socialLinks = [
   { name: 'Facebook', href: 'https://facebook.com/emmanuel.chinamwiri', icon: 'f' },
   { name: 'X', href: 'https://x.com/manzychinamwiri', icon: '𝕏' },
-  { name: 'Instagram', href: 'https://instagram.com/manzychinamwiri', icon: '◎' },
-  { name: 'WhatsApp', href: 'https://wa.me/265980851937', icon: '◉' },
-  { name: 'YouTube', href: 'https://www.youtube.com/@manzychinamwiri', icon: '▶' },
-  { name: 'TikTok', href: 'https://tiktok.com/@MwiriWrld', icon: '♪' },
+  { name: 'Instagram', href: 'https://instagram.com/manzychinamwiri', icon: 'camera' },
+  { name: 'WhatsApp', href: 'https://wa.me/265980851937', icon: 'message' },
+  { name: 'YouTube', href: 'https://www.youtube.com/@manzychinamwiri', icon: 'play' },
+  { name: 'TikTok', href: 'https://tiktok.com/@MwiriWrld', icon: 'music' },
 ]
 
 type FooterLink = {
@@ -101,9 +101,33 @@ export default function Footer() {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-2">
-              {socialLinks.map((social) => (
-                <a key={social.name} href={social.href} target="_blank" rel="noopener noreferrer" aria-label={social.name} title={social.name} className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.035] text-sm font-bold text-text-muted smooth-transition hover:-translate-y-0.5 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-200">{social.icon}</a>
-              ))}
+              {socialLinks.map((social) => {
+                const SocialIcon = social.icon === 'camera'
+                  ? Camera
+                  : social.icon === 'message'
+                    ? MessageCircle
+                    : social.icon === 'play'
+                      ? PlayCircle
+                      : social.icon === 'music'
+                        ? Music2
+                        : null
+
+                return (
+                  <a
+                    key={social.name}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={social.name}
+                    title={social.name}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs font-semibold text-text-secondary smooth-transition hover:-translate-y-0.5 hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                  >
+                    {SocialIcon ? <SocialIcon className="h-4 w-4 shrink-0" aria-hidden="true" /> : <span className="w-4 text-center text-sm font-extrabold" aria-hidden="true">{social.icon}</span>}
+                    <span>{social.name}</span>
+                    <ArrowUpRight className="h-3 w-3 opacity-50" aria-hidden="true" />
+                  </a>
+                )
+              })}
             </div>
 
             <div className="mt-6 flex flex-col gap-2 text-xs text-text-muted sm:flex-row sm:flex-wrap sm:gap-x-5">
