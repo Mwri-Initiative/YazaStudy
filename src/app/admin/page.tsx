@@ -199,7 +199,7 @@ export default function AdminPage() {
 
         // Validate the PDF magic bytes. A .pdf extension alone is not sufficient.
         const signature = new Uint8Array(await file.slice(0, 5).arrayBuffer())
-        const signatureText = String.fromCharCode(...signature)
+        const signatureText = new TextDecoder().decode(signature)
         if (signatureText !== '%PDF-') throw new Error(`"${file.name}" does not appear to be a valid PDF file.`)
 
         const percentDone = Math.round((i / selectedFiles.length) * 100)
