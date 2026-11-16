@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import SubjectCard from '../components/SubjectCard'
 import { Subject } from '../types'
-import { ArrowRight, BookOpen, CheckCircle2, Sparkles, Star, Users, Zap, ShieldCheck, Brain, Smartphone } from 'lucide-react'
+import { ArrowRight, BookOpen, CheckCircle2, Sparkles, Star, Users, Zap, ShieldCheck, Brain, Smartphone, Search } from 'lucide-react'
 import { useAuth } from '../lib/auth-context'
 import { motion } from 'framer-motion'
 
@@ -20,10 +21,10 @@ const subjects: Subject[] = [
 ]
 
 const stats = [
-  { value: '5,000+', label: 'Students' },
-  { value: '200+', label: 'Materials' },
-  { value: '6', label: 'MSCE Subjects' },
-  { value: '98%', label: 'Pass Rate' },
+  { value: 'MSCE', label: 'Exam focused' },
+  { value: '6', label: 'Core subjects' },
+  { value: 'AI', label: 'Study support' },
+  { value: 'MWK', label: 'Local pricing' },
 ]
 
 const features = [
@@ -36,6 +37,13 @@ const features = [
 export default function Home() {
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
+  const [quickSearch, setQuickSearch] = useState('')
+
+  const submitQuickSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const query = quickSearch.trim()
+    router.push(query ? `/shop?search=${encodeURIComponent(query)}` : '/shop')
+  }
 
   return (
     <main className="min-h-screen overflow-hidden">
@@ -69,7 +77,16 @@ export default function Home() {
                 Yaza Study brings MSCE materials, practice resources and a growing set of smart learning tools into one simple place.
               </p>
 
-              <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
+              <form onSubmit={submitQuickSearch} className="mt-7 flex max-w-xl flex-col gap-2 rounded-2xl border border-white/10 bg-white/[.04] p-2 sm:flex-row sm:items-center">
+                <label htmlFor="yaza-quick-search" className="sr-only">Search study materials</label>
+                <div className="flex min-w-0 flex-1 items-center gap-3 px-3">
+                  <Search className="h-5 w-5 shrink-0 text-text-muted" />
+                  <input id="yaza-quick-search" value={quickSearch} onChange={event => setQuickSearch(event.target.value)} placeholder="Search a subject, topic or past paper..." className="h-11 min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text-muted" />
+                </div>
+                <Button type="submit" className="h-11 rounded-xl bg-primary px-5 font-bold text-white hover:bg-primary-dark">Find materials <ArrowRight className="ml-2 h-4 w-4" /></Button>
+              </form>
+
+              <div className="mt-5 grid gap-3 sm:flex sm:flex-wrap">
                 <Button size="lg" className="h-12 rounded-2xl bg-primary px-6 font-extrabold text-white shadow-xl shadow-primary/20 hover:bg-primary-dark" onClick={() => router.push('/shop')}>
                   Explore study materials <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
