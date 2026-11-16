@@ -111,7 +111,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
-        setUser(mapSupabaseUser(data.user))
+        // Resolve the database-backed admin flag before exposing the signed-in
+        // user to protected pages. Otherwise /admin can redirect a real admin
+        // before the asynchronous auth-state listener finishes loading profile.
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', data.user.id)
+          .maybeSingle()
+
+        if (profileError) {
+          console.error('Could not verify user permissions after sign-in:', profileError)
+          setUser({ ...mapSupabaseUser(data.user), isAdmin: false })
+          return {
+            success: false,
+            error: 'You are signed in, but your account permissions could not be verified. Please refresh and try again.',
+          }
+        }
+
+        setUser({
+          ...mapSupabaseUser(data.user),
+          isAdmin: profile?.is_admin === true,
+        })
       }
       
       return { success: true }
