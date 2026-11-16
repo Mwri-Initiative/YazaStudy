@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
-import { ShoppingCart, LogOut, BookOpen, ChevronDown, Menu, X, ShieldCheck, Sparkles } from 'lucide-react'
+import { ShoppingCart, LogOut, BookOpen, ChevronDown, Menu, X, ShieldCheck, Sparkles, LayoutDashboard } from 'lucide-react'
 import { Button } from './ui/button'
 import { useAuth } from '../lib/auth-context'
 
@@ -59,6 +59,7 @@ export default function Header() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
+            {isAuthenticated && <Link href="/dashboard" className={`rounded-xl px-3.5 py-2 text-sm font-semibold smooth-transition ${pathname === '/dashboard' ? 'bg-primary/12 text-primary' : 'text-text-secondary hover:bg-white/5 hover:text-text'}`}><LayoutDashboard className="mr-1.5 inline h-4 w-4" />Dashboard</Link>}
             {navItems.map(item => {
               const active = pathname === item.href
               return (
@@ -87,7 +88,8 @@ export default function Header() {
                       <p className="truncate text-sm font-bold text-text">{user?.name}</p>
                       <p className="truncate text-xs text-text-muted">{user?.email}</p>
                     </div>
-                    <Link href="/my-materials" onClick={() => setDropdownOpen(false)} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-text-secondary hover:bg-primary/10 hover:text-primary"><BookOpen className="h-4 w-4" /> My Materials</Link>
+                    <Link href="/dashboard" onClick={() => setDropdownOpen(false)} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-text-secondary hover:bg-primary/10 hover:text-primary"><LayoutDashboard className="h-4 w-4" /> Student Dashboard</Link>
+                    <Link href="/my-materials" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-text-secondary hover:bg-primary/10 hover:text-primary"><BookOpen className="h-4 w-4" /> My Materials</Link>
                     <Link href="/shop" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-text-secondary hover:bg-accent/10 hover:text-accent"><ShoppingCart className="h-4 w-4" /> Study Shop</Link>
                     {isAdmin && <Link href="/admin" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 rounded-xl border-t border-white/10 px-3 py-2.5 text-sm font-bold text-primary"><ShieldCheck className="h-4 w-4" /> Admin Panel</Link>}
                     <button onClick={handleLogout} className="mt-1 w-full flex items-center gap-3 rounded-xl border-t border-white/10 px-3 py-2.5 text-left text-sm font-semibold text-red-400 hover:bg-red-500/10"><LogOut className="h-4 w-4" /> Sign Out</button>
@@ -110,6 +112,7 @@ export default function Header() {
         {mobileOpen && (
           <div className="md:hidden border-t border-white/10 px-3 pb-3 pt-2 animate-dropdown">
             <div className="grid gap-1">
+              {isAuthenticated && <Link href="/dashboard" className={`flex min-h-11 items-center gap-2 rounded-xl px-3.5 text-sm font-bold ${pathname === '/dashboard' ? 'bg-primary/12 text-primary' : 'text-text-secondary hover:bg-white/5'}`}><LayoutDashboard className="h-4 w-4" />Dashboard</Link>}
               {navItems.map(item => (
                 <Link key={item.href} href={item.href} className={`flex min-h-11 items-center rounded-xl px-3.5 text-sm font-bold ${pathname === item.href ? 'bg-primary/12 text-primary' : 'text-text-secondary hover:bg-white/5'}`}>
                   {item.label}
