@@ -691,7 +691,7 @@ export default function AITutorPage() {
             </Button>
             <div className="flex items-center gap-2 md:gap-3">
               <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden shrink-0">
-                <Image src="/mwiri-logo.svg" alt="Mwiri" width={40} height={40} className="object-cover" />
+                <Image src="/yaza-icon.svg" alt="Yaza Study" width={40} height={40} className="object-cover" />
               </div>
               <div className="min-w-0">
                 <h1 className="text-sm md:text-lg font-black text-white truncate flex items-center gap-2">
@@ -872,7 +872,7 @@ export default function AITutorPage() {
 
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg overflow-hidden shrink-0">
-                  <Image src="/mwiri-logo.svg" alt="Mwiri" width={48} height={48} className="object-cover" />
+                  <Image src="/yaza-icon.svg" alt="Yaza Study" width={48} height={48} className="object-cover" />
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-white">Yaza AI</h2>
