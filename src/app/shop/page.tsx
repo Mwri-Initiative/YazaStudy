@@ -19,6 +19,14 @@ export default function ShopPage() {
   const supabase = createClient()
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const initialSearch = params.get('search')
+    const initialSubject = params.get('subject')
+    if (initialSearch) setSearchTerm(initialSearch)
+    if (initialSubject) setSelectedSubject(initialSubject)
+  }, [])
+
+  useEffect(() => {
     const fetchMaterials = async () => {
       setIsLoading(true)
       const { data, error } = await supabase.from('materials').select('*').order('created_at', { ascending: false })
