@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft } from 'lucide-react'
@@ -15,6 +15,43 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [checkingRecovery, setCheckingRecovery] = useState(true)
+  const [recoveryReady, setRecoveryReady] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    let mounted = true
+
+    const checkRecoverySession = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (!mounted) return
+
+      if (sessionError || !session) {
+        setRecoveryReady(false)
+        setError('This password reset link is invalid or has expired. Please request a new reset link.')
+      } else {
+        setRecoveryReady(true)
+        setError('')
+      }
+      setCheckingRecovery(false)
+    }
+
+    checkRecoverySession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return
+      if (session) {
+        setRecoveryReady(true)
+        setError('')
+      }
+      setCheckingRecovery(false)
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
 
   const inputClass = 'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pl-11 text-text placeholder-text-muted focus:outline-none focus:border-primary/60 focus:bg-primary/5 focus:ring-1 focus:ring-primary/30 smooth-transition text-sm'
 
@@ -23,8 +60,12 @@ export default function ResetPasswordPage() {
     setError('')
     setSuccess('')
 
-    if (password.length < 6) {
-      setError('Your password must be at least 6 characters.')
+    if (!recoveryReady) {
+      setError('Your reset session is not valid. Please request a new reset link.')
+      return
+    }
+    if (password.length < 8) {
+      setError('Your password must be at least 8 characters.')
       return
     }
     if (password !== confirmPassword) {
@@ -41,10 +82,11 @@ export default function ResetPasswordPage() {
         return
       }
 
-      setSuccess('Your password has been updated. You can now sign in with your new password.')
+      setSuccess('Your password has been updated. Please sign in with your new password.')
       setPassword('')
       setConfirmPassword('')
-      window.setTimeout(() => router.replace('/auth'), 1800)
+      await supabase.auth.signOut()
+      window.setTimeout(() => router.replace('/auth'), 1400)
     } catch (err: any) {
       setError(err?.message || 'Could not update your password. Please request a new reset link.')
     } finally {
@@ -76,29 +118,37 @@ export default function ResetPasswordPage() {
           {error && <div role="alert" className="mb-5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>}
           {success && <div role="status" className="mb-5 flex gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-green-400 text-sm"><CheckCircle className="h-4 w-4 shrink-0" />{success}</div>}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="new-password" className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">New Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-                <input id="new-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className={inputClass + ' pr-11'} placeholder="At least 6 characters" autoComplete="new-password" minLength={6} required />
-                <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+          {checkingRecovery ? (
+            <p role="status" className="py-4 text-center text-sm text-text-muted">Verifying your secure reset link...</p>
+          ) : !recoveryReady ? (
+            <Link href="/auth" className="block w-full rounded-xl bg-primary px-4 py-3 text-center text-sm font-semibold text-white hover:bg-primary/90">
+              Return to sign in
+            </Link>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="new-password" className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">New Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+                  <input id="new-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className={inputClass + ' pr-11'} placeholder="At least 8 characters" autoComplete="new-password" minLength={8} required />
+                  <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="confirm-password" className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">Confirm New Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-                <input id="confirm-password" type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputClass + ' pr-11'} placeholder="Enter the new password again" autoComplete="new-password" minLength={6} required />
-                <button type="button" onClick={() => setShowConfirm(v => !v)} aria-label={showConfirm ? 'Hide password' : 'Show password'} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted">{showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+              <div>
+                <label htmlFor="confirm-password" className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">Confirm New Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+                  <input id="confirm-password" type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputClass + ' pr-11'} placeholder="Enter the new password again" autoComplete="new-password" minLength={8} required />
+                  <button type="button" onClick={() => setShowConfirm(v => !v)} aria-label={showConfirm ? 'Hide password' : 'Show password'} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted">{showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+                </div>
               </div>
-            </div>
 
-            <button type="submit" disabled={submitting || !!success} className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-accent/90 text-white font-semibold py-3 rounded-xl disabled:opacity-60 disabled:cursor-not-allowed">
-              {submitting ? 'Updating password...' : 'Update Password'}
-            </button>
-          </form>
+              <button type="submit" disabled={submitting || !!success} className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-accent/90 text-white font-semibold py-3 rounded-xl disabled:opacity-60 disabled:cursor-not-allowed">
+                {submitting ? 'Updating password...' : 'Update Password'}
+              </button>
+            </form>
+          )}
         </div>
       </section>
     </main>
